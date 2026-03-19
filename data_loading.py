@@ -229,3 +229,34 @@ def load_ccle_raw(path):
         samples,
         name="CCLE raw"
     )
+
+
+def load_expression_matrix(path, sep="\t", index_col=0, name="dataset"):
+    """
+    Generic loader for any gene expression matrix.
+
+    Parameters
+    ----------
+    path : str
+        Path to the file
+    sep : str
+        Delimiter (default: tab)
+    index_col : int
+        Column to use as gene index (default: 0)
+    name : str
+        Dataset name
+
+    Returns
+    -------
+    ExpressionDataset
+    """
+    df = pd.read_csv(path, sep=sep, index_col=index_col)
+    df = df.apply(pd.to_numeric, errors="coerce")
+
+    X = df.to_numpy(dtype=np.float32)
+    X = np.nan_to_num(X, nan=0.0)
+
+    genes = df.index.to_numpy()
+    samples = df.columns.to_numpy()
+
+    return ExpressionDataset(X, genes, samples, name=name)
