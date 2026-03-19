@@ -1,0 +1,64 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+.eggs/
+
+# Virtual environments
+venv/
+env/
+.venv/
+.env/
+
+# Jupyter notebooks
+.ipynb_checkpoints/
+*.ipynb
+
+# Data files (large datasets)
+*.tab
+*.gct
+*.csv
+*.tsv
+*.rds
+*.pkl
+*.npy
+*.npz
+
+# R files
+*.RData
+*.Rhistory
+*.Rproj.user/
+
+# Results and outputs
+synthetic_data/
+*.pdf
+*.png
+*.jpg
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# LaTeX
+*.aux
+*.log
+*.out
+*.toc
+*.bbl
+*.blg
+*.synctex.gz
+
+
