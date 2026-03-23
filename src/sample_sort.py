@@ -5,6 +5,7 @@ from matplotlib import pyplot as plt
 from correlation import avg_abs_corr_rows
 
 
+
 def extend_bicluster_samples_fast(
     X,
     gene_set,
@@ -69,16 +70,15 @@ def extend_bicluster_samples_fast(
     n_genes = len(gene_indices)
     n_total = X.shape[1]
 
-    current = list(initial_sample_set)
+    current   = list(initial_sample_set)
     remaining = list(np.setdiff1d(np.arange(n_total), current))
-    ranked = list(current)
-    alphas = []
-    picked = []
+    ranked    = list(current)
+    alphas    = []
+    picked    = []
 
-    total_steps = len(remaining)
-    iteration = 0
-
-    G_cur = G[:, current]
+    total_steps   = len(remaining)
+    iteration     = 0
+    G_cur         = G[:, current]
     initial_alpha = avg_abs_corr_rows(G_cur)
 
     print(f"Initial: {len(current)} samples, {n_genes} genes")
@@ -93,44 +93,43 @@ def extend_bicluster_samples_fast(
             break
 
         iteration += 1
-        n = len(current)
-
+        n     = len(current)
         G_cur = G[:, current]
         G_rem = G[:, remaining]
 
-        cur_sum = G_cur.sum(axis=1)
+        cur_sum    = G_cur.sum(axis=1)
         cur_sum_sq = (G_cur ** 2).sum(axis=1)
 
-        cand_sum = cur_sum[:, None] + G_rem
-        cand_sum_sq = cur_sum_sq[:, None] + G_rem**2
+        cand_sum    = cur_sum[:, None] + G_rem
+        cand_sum_sq = cur_sum_sq[:, None] + G_rem ** 2
 
-        total_n = n + 1
-        cand_mean = cand_sum / total_n
-        cand_var = (cand_sum_sq / total_n) - cand_mean**2
-        cand_std = np.sqrt(np.maximum(cand_var, 1e-16)) + 1e-8
+        total_n    = n + 1
+        cand_mean  = cand_sum / total_n
+        cand_var   = (cand_sum_sq / total_n) - cand_mean ** 2
+        cand_std   = np.sqrt(np.maximum(cand_var, 1e-16)) + 1e-8
 
         best_alpha = -np.inf
-        best_idx = None
+        best_idx   = None
 
         for i in range(len(remaining)):
-            mu_i = cand_mean[:, i]
-            sd_i = cand_std[:, i]
+            mu_i   = cand_mean[:, i]
+            sd_i   = cand_std[:, i]
 
             G_full = np.hstack([G_cur, G_rem[:, i:i + 1]])
             Z_full = (G_full - mu_i[:, None]) / sd_i[:, None]
 
-            C = (Z_full @ Z_full.T) / total_n
-            C = np.nan_to_num(C, nan=0.0, posinf=0.0, neginf=0.0)
+            C      = (Z_full @ Z_full.T) / total_n
+            C      = np.nan_to_num(C, nan=0.0, posinf=0.0, neginf=0.0)
 
             alpha_i = np.abs(C).sum() / (n_genes ** 2)
 
             if alpha_i > best_alpha:
                 best_alpha = alpha_i
-                best_idx = i
+                best_idx   = i
 
         best_sample = remaining[best_idx]
-        delta = best_alpha - prev_alpha
-        prev_alpha = best_alpha
+        delta       = best_alpha - prev_alpha
+        prev_alpha  = best_alpha
 
         current.append(best_sample)
         remaining.pop(best_idx)
@@ -139,19 +138,17 @@ def extend_bicluster_samples_fast(
         picked.append((int(best_sample), float(best_alpha), float(delta)))
 
         if iteration % progress_every == 0 or len(remaining) == 0:
-            elapsed = time.time() - start_time
+            elapsed    = time.time() - start_time
             steps_left = total_steps - iteration
-            avg_time = elapsed / iteration
-            eta = avg_time * steps_left
-            elapsed_min = elapsed / 60
-            eta_min = eta / 60
+            avg_time   = elapsed / iteration
+            eta        = avg_time * steps_left
 
             if (not print_only_improvements) or (delta > 0):
                 print(
                     f"Added sample {best_sample:4d} | Alpha: {best_alpha:.6f} | "
                     f"Delta: {delta:+.6f} | "
                     f"Progress: {len(ranked)}/{n_total} | "
-                    f"Elapsed: {elapsed_min:.1f} min | ETA: {eta_min:.1f} min"
+                    f"Elapsed: {elapsed/60:.1f} min | ETA: {eta/60:.1f} min"
                 )
 
     total_elapsed = time.time() - start_time
@@ -165,8 +162,6 @@ def extend_bicluster_samples_fast(
     print(f"Total time: {total_elapsed/60:.1f} minutes")
 
     return np.array(ranked), alphas, picked
-
-
 
 def plot_sample_extension_summary(
     X,
