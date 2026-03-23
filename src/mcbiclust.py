@@ -1,15 +1,15 @@
 # pipeline.py
 import numpy as np
 from gene_seed import select_initial_seed_genes
-from src.find_seed_sample import find_seed_bicluster
-from src.pruning import prune_bicluster_genes
-from src.sample_sort import extend_bicluster_samples_fast
-from src.correlation_vector import cv_eval
-from src.pca import pc1_vec_fun
-from src.thresholding import threshold_bic
-from src.fork import pc1_align, fork_classifier
-from src.multi_run import run_multiple, multi_sample_sort_prep, average_corvec_per_cluster
-from src.silhouette import silhouette_clust_groups, plot_silhouette
+from find_seed_sample import find_seed_bicluster
+from pruning import prune_bicluster_genes
+from sample_sort import extend_bicluster_samples_fast
+from correlation_vector import cv_eval
+from pca import pc1_vec_fun
+from thresholding import threshold_bic
+from fork import pc1_align, fork_classifier
+from multi_run import run_multiple, multi_sample_sort_prep, average_corvec_per_cluster
+from silhouette import silhouette_clust_groups, plot_silhouette
 
 
 class MCbiclust:
