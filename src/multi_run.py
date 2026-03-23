@@ -1,8 +1,8 @@
 # multi_run.py
 import numpy as np
-from src.find_seed_sample import find_seed_bicluster
-from src.pruning import prune_bicluster_genes
-from src.correlation_vector import cv_eval
+from find_seed_sample import find_seed_bicluster
+from pruning import prune_bicluster_genes
+from correlation_vector import cv_eval
 from correlation import avg_abs_corr_rows
 
 
