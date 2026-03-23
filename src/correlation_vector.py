@@ -97,7 +97,19 @@ def gene_vec_fun(X, gene_set, seed, splits=8):
 
     return gene_vec, best_idx
 
+def print_top_genes(corr_vec, gene_names=None, top_n=20):
+    corr_vec = np.asarray(corr_vec)
+    ranked_idx = np.argsort(np.abs(corr_vec))[::-1]
 
+    print("\nRank  Gene ID  Gene Name                     Correlation")
+    print("-" * 60)
+
+    for rank, i in enumerate(ranked_idx[:top_n], start=1):
+        gene_id = i
+        gene_name = gene_names[i] if gene_names is not None else f"gene_{i}"
+        corr = corr_vec[i]
+
+        print(f"{rank:<5} {gene_id:<8} {gene_name:<30} {corr:+.4f}")
 def cv_eval(X_part, X_all, seed, splits=8):
     """
     Compute correlation vector for all genes against the best gene vector.
@@ -157,6 +169,7 @@ def cv_eval(X_part, X_all, seed, splits=8):
     print(f"Min: {corr_vec.min():.4f}")
     print(f"Max: {corr_vec.max():.4f}")
     print(f"Mean |corr|: {np.abs(corr_vec).mean():.4f}")
+    print_top_genes(corr_vec, gene_names=None, top_n=20)
 
     return corr_vec, best_idx
 
