@@ -4,40 +4,11 @@ import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
 
 
-def pc1_align(X, pc1, cor_vec, sort_order, bic_samps):
-    """
-    Align PC1 sign so upper fork corresponds to positively correlated genes.
-
-    Equivalent to R's PC1Align.
-
-    Parameters
-    ----------
-    X          : np.ndarray  expression matrix (genes x samples)
-    pc1        : np.ndarray  PC1 values in sort_order sequence
-    cor_vec    : np.ndarray  correlation vector (all genes)
-    sort_order : np.ndarray  ranked sample indices (0-indexed)
-    bic_samps  : np.ndarray  bicluster sample indices
-
-    Returns
-    -------
-    pc1 : np.ndarray  PC1 values with corrected sign
-    """
-    max_cv_loc = int(np.argmax(cor_vec))
-    n_samps    = max(3, len(bic_samps))
-    samp_idx   = sort_order[:n_samps]
-
-    gem1     = X[max_cv_loc, samp_idx]
-    cor_test = np.corrcoef(gem1.astype(float), pc1[:n_samps])[0, 1]
-
-    print(f"Top gene index: {max_cv_loc} | cor_test = {cor_test:.4f}")
-
-    if cor_test < 0:
-        pc1 = -pc1
-        print("PC1 sign flipped by PC1Align")
-    else:
-        print("PC1 sign unchanged")
-
-    return pc1
+# pca.py
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
+from sklearn.decomposition import PCA
 
 
 def fork_classifier(pc1, samp_num):
@@ -58,20 +29,13 @@ def fork_classifier(pc1, samp_num):
     else:
         upper, lower = g2, g1
 
-    # build full array
     fork_status = np.full(len(pc1), "None", dtype=object)
 
-    upper_indices = np.where(upper)[0]
-    lower_indices = np.where(lower)[0]
-
-    for i in upper_indices:
+    for i in np.where(upper)[0]:
         fork_status[i] = "Upper"
-    for i in lower_indices:
+    for i in np.where(lower)[0]:
         fork_status[i] = "Lower"
 
-    # debug
-    print(f"  upper_indices[:5]: {upper_indices[:5]}")
-    print(f"  fork_status[:5]:   {fork_status[:5]}")
     print(f"Upper fork: {(fork_status == 'Upper').sum()} samples")
     print(f"Lower fork: {(fork_status == 'Lower').sum()} samples")
     print(f"None:       {(fork_status == 'None').sum()} samples")
