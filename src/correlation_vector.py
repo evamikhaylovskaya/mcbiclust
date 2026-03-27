@@ -6,7 +6,7 @@ from matplotlib import pyplot as plt
 from correlation import avg_abs_corr_rows
 
 
-def gene_vec_fun(X, gene_set, seed, splits=8):
+def gene_vec_fun(X, gene_set, seed, splits=10):
     """
     Build the gene vector from the best hierarchical subgroup.
 
@@ -110,7 +110,9 @@ def print_top_genes(corr_vec, gene_names=None, top_n=20):
         corr = corr_vec[i]
 
         print(f"{rank:<5} {gene_id:<8} {gene_name:<30} {corr:+.4f}")
-def cv_eval(X_part, X_all, seed, splits=8):
+        
+        
+def cv_eval(X_part, X_all, seed, splits=10, gene_names= None):
     """
     Compute correlation vector for all genes against the best gene vector.
 
@@ -138,138 +140,35 @@ def cv_eval(X_part, X_all, seed, splits=8):
     """
     X_part = np.asarray(X_part, dtype=float)
     X_all = np.asarray(X_all, dtype=float)
-    J = np.asarray(seed, dtype=int)
+    seed = np.asarray(seed, dtype=int)
 
     if X_part.ndim != 2 or X_all.ndim != 2:
         raise ValueError("X_part and X_all must be 2D arrays")
-    if len(J) == 0:
+    if len(seed) == 0:
         raise ValueError("seed must not be empty")
+    
+    
 
     gene_vec, best_idx = gene_vec_fun(
         X_part,
         np.arange(X_part.shape[0]),
-        J,
+        seed,
         splits=splits
     )
 
-    X_seed = X_all[:, J]
-    n = len(J)
+    corr_vec = np.array([
+        np.corrcoef(X_all[i, seed], gene_vec)[0, 1]
+        for i in range(X_all.shape[0])
+    ], dtype=float)
+    corr_vec = np.nan_to_num(corr_vec, nan=0.0)
 
-    gv_mean = gene_vec.mean()
-    gv_std = gene_vec.std()
-    gv_norm = (gene_vec - gv_mean) / (gv_std + 1e-8)
-
-    g_mean = X_seed.mean(axis=1, keepdims=True)
-    g_std = X_seed.std(axis=1, keepdims=True) + 1e-8
-    g_norm = (X_seed - g_mean) / g_std
-
-    corr_vec = (g_norm @ gv_norm) / n
 
     print(f"Correlation vector shape: {corr_vec.shape}")
     print(f"Min: {corr_vec.min():.4f}")
     print(f"Max: {corr_vec.max():.4f}")
     print(f"Mean |corr|: {np.abs(corr_vec).mean():.4f}")
-    print_top_genes(corr_vec, gene_names=None, top_n=20)
+    print_top_genes(corr_vec, gene_names=gene_names, top_n=20)
 
     return corr_vec, best_idx
 
 
-
-def plot_correlation_vector_distribution(
-    corr_vector,
-    bins=100,
-    save_path=None
-):
-    """
-    Plot distribution of correlation vector values.
-
-    Parameters
-    ----------
-    corr_vector : np.ndarray
-        Correlation vector for all genes
-
-    bins : int
-        Histogram bins
-
-    save_path : str or None
-        Optional file path to save figure
-    """
-    corr_vector = np.asarray(corr_vector, dtype=float)
-
-    fig, axes = plt.subplots(1, 2, figsize=(12, 4))
-
-    axes[0].hist(
-        corr_vector,
-        bins=bins,
-        edgecolor="none",
-        color="steelblue"
-    )
-    axes[0].axvline(x=0, color="red", linestyle="--")
-    axes[0].set_xlabel("Correlation")
-    axes[0].set_ylabel("Count")
-    axes[0].set_title("Distribution of correlation vector values")
-
-    axes[1].hist(
-        np.abs(corr_vector),
-        bins=bins,
-        edgecolor="none",
-        color="steelblue"
-    )
-    axes[1].set_xlabel("|Correlation|")
-    axes[1].set_ylabel("Count")
-    axes[1].set_title("Distribution of |correlation| values")
-
-    plt.tight_layout()
-
-    if save_path is not None:
-        plt.savefig(save_path, dpi=150, bbox_inches="tight")
-
-    plt.show()
-
-
-def plot_correlation_vector_ranked(
-    corr_vector,
-    ranked_gene_indices=None,
-    save_path=None
-):
-    """
-    Scatter plot of correlation vector ordered by |correlation|.
-
-    Parameters
-    ----------
-    corr_vector : np.ndarray
-        Correlation vector
-
-    ranked_gene_indices : np.ndarray or None
-        Precomputed ranking indices. If None, they will be computed.
-
-    save_path : str or None
-        Optional file path to save figure
-    """
-    corr_vector = np.asarray(corr_vector, dtype=float)
-
-    if ranked_gene_indices is None:
-        ranked_gene_indices = np.argsort(np.abs(corr_vector))[::-1]
-
-    plt.figure(figsize=(10, 4))
-
-    plt.scatter(
-        range(len(corr_vector)),
-        corr_vector[ranked_gene_indices],
-        s=1,
-        alpha=0.5,
-        color="steelblue"
-    )
-
-    plt.axhline(y=0, color="red", linestyle="--")
-
-    plt.xlabel("Gene rank (by |correlation|)")
-    plt.ylabel("Correlation value")
-    plt.title("Correlation vector: genes ranked by |correlation|")
-
-    plt.tight_layout()
-
-    if save_path is not None:
-        plt.savefig(save_path, dpi=150, bbox_inches="tight")
-
-    plt.show()
