@@ -106,3 +106,104 @@ def cv_plot(cor_vec_list, geneset_loc, geneset_name,
                  fontweight="bold", y=1.01)
     plt.tight_layout()
     plt.show()
+    
+    
+
+def plot_correlation_vector_distribution(
+    corr_vector,
+    bins=100,
+    save_path=None
+):
+    """
+    Plot distribution of correlation vector values.
+
+    Parameters
+    ----------
+    corr_vector : np.ndarray
+        Correlation vector for all genes
+
+    bins : int
+        Histogram bins
+
+    save_path : str or None
+        Optional file path to save figure
+    """
+    corr_vector = np.asarray(corr_vector, dtype=float)
+
+    fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+
+    axes[0].hist(
+        corr_vector,
+        bins=bins,
+        edgecolor="none",
+        color="steelblue"
+    )
+    axes[0].axvline(x=0, color="red", linestyle="--")
+    axes[0].set_xlabel("Correlation")
+    axes[0].set_ylabel("Count")
+    axes[0].set_title("Distribution of correlation vector values")
+
+    axes[1].hist(
+        np.abs(corr_vector),
+        bins=bins,
+        edgecolor="none",
+        color="steelblue"
+    )
+    axes[1].set_xlabel("|Correlation|")
+    axes[1].set_ylabel("Count")
+    axes[1].set_title("Distribution of |correlation| values")
+
+    plt.tight_layout()
+
+    if save_path is not None:
+        plt.savefig(save_path, dpi=150, bbox_inches="tight")
+
+    plt.show()
+
+
+def plot_correlation_vector_ranked(
+    corr_vector,
+    ranked_gene_indices=None,
+    save_path=None
+):
+    """
+    Scatter plot of correlation vector ordered by |correlation|.
+
+    Parameters
+    ----------
+    corr_vector : np.ndarray
+        Correlation vector
+
+    ranked_gene_indices : np.ndarray or None
+        Precomputed ranking indices. If None, they will be computed.
+
+    save_path : str or None
+        Optional file path to save figure
+    """
+    corr_vector = np.asarray(corr_vector, dtype=float)
+
+    if ranked_gene_indices is None:
+        ranked_gene_indices = np.argsort(np.abs(corr_vector))[::-1]
+
+    plt.figure(figsize=(10, 4))
+
+    plt.scatter(
+        range(len(corr_vector)),
+        corr_vector[ranked_gene_indices],
+        s=1,
+        alpha=0.5,
+        color="steelblue"
+    )
+
+    plt.axhline(y=0, color="red", linestyle="--")
+
+    plt.xlabel("Gene rank (by |correlation|)")
+    plt.ylabel("Correlation value")
+    plt.title("Correlation vector: genes ranked by |correlation|")
+
+    plt.tight_layout()
+
+    if save_path is not None:
+        plt.savefig(save_path, dpi=150, bbox_inches="tight")
+
+    plt.show()
