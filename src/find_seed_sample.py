@@ -13,6 +13,7 @@ def find_seed_bicluster(
     log_improvements=True,
     print_every_improvement=False,
     print_every_iter=False,
+    verbose=False,
 ):
     """
     Greedy stochastic search for a seed sample set that maximizes
@@ -98,11 +99,13 @@ def find_seed_bicluster(
     best_alpha = calculate_alpha(best_J)
     initial_alpha = best_alpha
     history = [best_alpha]
+    history_iterations = [0]
     improvements = []
 
-    print(f"Using {len(I)} genes, {n_samples} samples")
-    print(f"Initial samples: {best_J.tolist()}")
-    print(f"Initial alpha ({n_samples} samples, {len(I)} genes) = {best_alpha:.6f}")
+    if verbose:
+        print(f"Using {len(I)} genes, {n_samples} samples")
+        print(f"Initial samples: {best_J.tolist()}")
+        print(f"Initial alpha ({n_samples} samples, {len(I)} genes) = {best_alpha:.6f}")
 
     for iteration in range(1, iterations + 1):
         idx_to_replace = rng.integers(0, n_samples)
@@ -133,6 +136,7 @@ def find_seed_bicluster(
             best_J = J_candidate.copy()
             best_alpha = candidate_alpha
             history.append(best_alpha)
+            history_iterations.append(iteration)
 
             if log_improvements:
                 improvements.append(
@@ -169,6 +173,9 @@ def find_seed_bicluster(
                 f"replace pos {idx_to_replace} -> {new_sample:4d} | "
                 f"candidate alpha = {candidate_alpha:.6f} ({status})"
             )
+            
+        if iteration % 100 == 0:
+            print(f"Iterations: {iteration:4d} | Alpha: {best_alpha:.6f}")
 
     alphas = [imp["alpha"] for imp in improvements]
     if not all(alphas[i] <= alphas[i + 1] for i in range(len(alphas) - 1)):
@@ -192,42 +199,10 @@ def find_seed_bicluster(
             f"is not greater than initial alpha ({initial_alpha})"
         )
 
-    print(f"Final alpha verified: {recomputed:.6f}")
-    print("All debug checks passed.")
+    if verbose:
+        print(f"Final alpha verified: {recomputed:.6f}")
+        print("All debug checks passed.")
 
-    return best_J, float(best_alpha), improvements, history
+    return best_J, float(best_alpha), improvements, history, history_iterations
 
 
-def run_find_seed_over_iterations(
-    X,
-    gene_set,
-    steps,
-    n_samples=10,
-    random_state=None,
-):
-    """
-    Run FindSeed repeatedly over increasing iteration counts, reusing
-    the previous best seed as the next initial seed.
-    """
-    alpha_history = []
-    seed_history = []
-    seed_prev = None
-
-    for s in steps:
-        J, a, _, _ = find_seed_bicluster(
-            X=X,
-            gene_set=gene_set,
-            n_samples=n_samples,
-            iterations=s,
-            random_state=random_state,
-            initial_seed=seed_prev,
-            log_improvements=False,
-            print_every_improvement=False,
-            print_every_iter=False,
-        )
-        seed_prev = J
-        seed_history.append(J.copy())
-        alpha_history.append(a)
-        print(f"Iterations: {s:4d} | Alpha: {a:.6f}")
-
-    return seed_history, alpha_history
