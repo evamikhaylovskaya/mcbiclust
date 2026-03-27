@@ -16,6 +16,7 @@ def prune_bicluster_genes(
     random_state=None,
     plot_dendrogram=True,
     dendrogram_sample_size=100,
+    gene_names=None,
 ):
     """
     Prune genes in a bicluster by hierarchical clustering and alpha filtering.
@@ -117,6 +118,10 @@ def prune_bicluster_genes(
             "n_genes": int(n_genes_group),
             "local_idx": local_group_idx,
             "original_genes": gene_indices[local_group_idx],
+            "gene_names": (
+                np.asarray(gene_names)[gene_indices[local_group_idx]]
+                if gene_names is not None else None
+            ),
         }
 
         if group_alpha > original_alpha:
