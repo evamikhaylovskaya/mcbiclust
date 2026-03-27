@@ -54,7 +54,7 @@ class ExpressionDataset:
 
     def __init__(self, X, genes, samples, name="dataset"):
 
-        self.X = np.asarray(X, dtype=np.float32)
+        self.X = np.asarray(X, dtype=np.float64)
         self.genes = np.asarray(genes)
         self.samples = np.asarray(samples)
         self.name = name
@@ -186,7 +186,7 @@ def load_ecoli(path):
 
     df = df.apply(pd.to_numeric, errors="coerce")
 
-    X = df.to_numpy(dtype=np.float32)
+    X = df.to_numpy(dtype=np.float64)
 
     X = np.nan_to_num(X, nan=0.0)
 
@@ -219,7 +219,7 @@ def load_ccle_raw(path):
     X = df.iloc[:,2:].apply(
         pd.to_numeric,
         errors="coerce"
-    ).to_numpy(dtype=np.float32)
+    ).to_numpy(dtype=np.float64)
 
     X = np.nan_to_num(X, nan=0.0)
 
@@ -253,10 +253,126 @@ def load_expression_matrix(path, sep="\t", index_col=0, name="dataset"):
     df = pd.read_csv(path, sep=sep, index_col=index_col)
     df = df.apply(pd.to_numeric, errors="coerce")
 
-    X = df.to_numpy(dtype=np.float32)
+    X = df.to_numpy(dtype=np.float64)
     X = np.nan_to_num(X, nan=0.0)
 
     genes = df.index.to_numpy()
     samples = df.columns.to_numpy()
 
     return ExpressionDataset(X, genes, samples, name=name)
+
+
+def load_ccle_mitocarta(
+    ccle_path: str,
+    mitocarta_path: str,
+    pseudocount: float = 1.0,
+    mitocarta_sheet: str = "A Human MitoCarta3.0",
+    symbol_col: str = "Symbol",
+    clean_ccle_gene_names: bool = True,
+):
+    """
+    Load CCLE, apply log2 transform, load MitoCarta, and match mitochondrial genes.
+
+    Parameters
+    ----------
+    ccle_path : str
+        Path to CCLE GCT file.
+
+    mitocarta_path : str
+        Path to MitoCarta .xls or .csv file.
+
+    pseudocount : float
+        Pseudocount for log2 transform.
+
+    mitocarta_sheet : str
+        Excel sheet name for MitoCarta, used only for .xls/.xlsx files.
+
+    symbol_col : str
+        Column name containing gene symbols in MitoCarta.
+
+    clean_ccle_gene_names : bool
+        If True, strip suffixes like 'TP53 (7157)' -> 'TP53' before matching.
+
+    Returns
+    -------
+    ccle_log : ExpressionDataset
+        Full log-transformed CCLE dataset.
+
+    gene_set : np.ndarray
+        Indices of matched mitochondrial genes in ccle_log.
+
+    ccle_mito : ExpressionDataset
+        Mitochondrial-only subset dataset.
+
+    mitocarta_genes : np.ndarray
+        Raw gene symbol list from MitoCarta.
+    """
+    # 1. Load CCLE
+    ccle = load_ccle_raw(ccle_path)
+    if pseudocount <= 0:
+        raise ValueError("pseudocount must be > 0")
+
+    ccle_log = ExpressionDataset(
+        X=np.log2(ccle.X + pseudocount),
+        genes=ccle.genes.copy(),
+        samples=ccle.samples.copy(),
+        name=f"{ccle.name} | log2"
+    )
+
+    # 2. Load MitoCarta
+    if mitocarta_path.lower().endswith(".csv"):
+        mito_df = pd.read_csv(mitocarta_path)
+    elif mitocarta_path.lower().endswith((".xls", ".xlsx")):
+        mito_df = pd.read_excel(mitocarta_path, sheet_name=mitocarta_sheet)
+    else:
+        raise ValueError("mitocarta_path must be .csv, .xls, or .xlsx")
+
+    mito_df.columns = mito_df.columns.astype(str).str.strip()
+
+    if symbol_col not in mito_df.columns:
+        raise KeyError(
+            f"Column '{symbol_col}' not found in MitoCarta file. "
+            f"Available columns: {mito_df.columns.tolist()}"
+        )
+
+    mitocarta_genes = (
+        mito_df[symbol_col]
+        .dropna()
+        .astype(str)
+        .str.strip()
+        .unique()
+    )
+
+    # 3. Match genes
+    if clean_ccle_gene_names:
+        ccle_gene_names = (
+            pd.Series(ccle_log.genes)
+            .astype(str)
+            .str.split(r"\s*\(")
+            .str[0]
+            .str.strip()
+            .to_numpy()
+        )
+    else:
+        ccle_gene_names = np.asarray(ccle_log.genes).astype(str)
+
+    gene_set = np.where(np.isin(ccle_gene_names, mitocarta_genes))[0]
+
+    # 4. Build mito-only subset
+    ccle_mito = ExpressionDataset(
+        X=ccle_log.X[gene_set],
+        genes=ccle_log.genes[gene_set],
+        samples=ccle_log.samples.copy(),
+        name=f"{ccle_log.name} | {len(gene_set)}_mitocarta_genes"
+    )
+
+    # 5. Print summary
+    print(f"MitoCarta genes in file: {len(mitocarta_genes)}")
+    print(f"Matched mitochondrial genes in CCLE: {len(gene_set)}")
+
+    if len(gene_set) == 0:
+        print("Warning: no genes matched.")
+    else:
+        print("First matched genes:", ccle_log.genes[gene_set[:10]])
+
+    return ccle_log, gene_set, ccle_mito, mitocarta_genes
