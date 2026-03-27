@@ -7,7 +7,7 @@ from correlation import avg_abs_corr_rows
 
 
 def run_multiple(X, n_runs=20, n_genes=1000, n_samples=10,
-                 iterations=500, splits=8, random_state_offset=0):
+                 iterations=500, splits=8, cv_splits=10, random_state_offset=0):
     """
     Run MCbiclust multiple times to build correlation vector matrix.
 
@@ -46,15 +46,17 @@ def run_multiple(X, n_runs=20, n_genes=1000, n_samples=10,
         gene_set_i = np.sort(rng_i.choice(X.shape[0], n_genes, replace=False))
 
         # FindSeed
-        J_i, alpha_i, _, _ = find_seed_bicluster(
-            X, gene_set_i,
-            n_samples               = n_samples,
-            iterations              = iterations,
-            random_state            = rs,
-            initial_seed            = None,
-            log_improvements        = False,
-            print_every_improvement = False,
-            print_every_iter        = False
+        J_i, alpha_i, _, _, _ = find_seed_bicluster(
+            X=X,
+            gene_set=gene_set_i,
+            n_samples=n_samples,
+            iterations=iterations,
+            random_state=rs,
+            initial_seed=None,
+            log_improvements=False,
+            print_every_improvement=False,
+            print_every_iter=False,
+            verbose=False,
         )
 
         # HclustGenesHiCor
@@ -62,7 +64,8 @@ def run_multiple(X, n_runs=20, n_genes=1000, n_samples=10,
             X,
             gene_set   = gene_set_i,
             sample_set = J_i,
-            n_groups   = splits
+            n_groups   = splits,
+            plot_dendrogram = False,
         )
 
         # CVEval
@@ -70,7 +73,7 @@ def run_multiple(X, n_runs=20, n_genes=1000, n_samples=10,
             X_part = X[pruned_i],
             X_all  = X,
             seed   = J_i,
-            splits = splits
+            splits = cv_splits
         )
 
         seeds_list.append(J_i)
@@ -172,7 +175,6 @@ def average_corvec_per_cluster(cor_vec_mat, cluster_groups,
 
         av_cv = np.abs(cor_vec_mat[:, runs_k]).mean(axis=1)
         av_cv_signed = cor_vec_mat[:, runs_k].mean(axis=1)
-
         av_corvec.append(av_cv)
         av_corvec_signed.append(av_cv_signed)
         print(f"Cluster {k+1}: {len(runs_k)} runs | "
